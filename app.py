@@ -169,6 +169,24 @@ elif app_mode == "📝 Issue Tracker":
             
     df_issues = load_issues()
     if not df_issues.empty:
+        # Date Filter
+        if 'Date' in df_issues.columns:
+            import pandas as pd
+            df_issues['Date'] = pd.to_datetime(df_issues['Date'], errors='coerce')
+            valid_dates = df_issues['Date'].dropna()
+            
+            if not valid_dates.empty:
+                st.sidebar.header("🔍 Issue Filters")
+                min_date = valid_dates.min().date()
+                max_date = valid_dates.max().date()
+                
+                date_from = st.sidebar.date_input("From Date", value=min_date, min_value=min_date, max_value=max_date, key="issue_date_from")
+                date_to = st.sidebar.date_input("To Date", value=max_date, min_value=min_date, max_value=max_date, key="issue_date_to")
+                
+                if date_from and date_to:
+                    mask = (df_issues['Date'].dt.date >= date_from) & (df_issues['Date'].dt.date <= date_to)
+                    df_issues = df_issues[mask]
+        
         issues_kpi = compute_issues_kpi(df_issues)
         render_issues_kpi(issues_kpi)
         
