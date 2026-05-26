@@ -1,27 +1,25 @@
 import io
-
 import pandas as pd
+from openpyxl.utils import get_column_letter
 
 
 def to_csv_bytes(df: pd.DataFrame) -> bytes:
     """Encode DataFrame as UTF-8 CSV bytes with BOM."""
-    output = io.BytesIO()
-    df.to_csv(output, index=False, encoding="utf-8-sig")
-    return output.getvalue()
+    return df.to_csv(index=False).encode('utf-8-sig')
 
 
 def to_excel_bytes(df: pd.DataFrame) -> bytes:
-    """Encode DataFrame as .xlsx bytes using openpyxl engine with auto-fit columns."""
+    """Encode DataFrame as .xlsx bytes using openpyxl engine."""
     output = io.BytesIO()
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df.to_excel(writer, sheet_name="Filtered Data", index=False)
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Filtered Data')
+        
         # Auto-fit column widths
-        worksheet = writer.sheets["Filtered Data"]
-        for col_idx, col in enumerate(df.columns, 1):
-            max_len = max(
-                df[col].astype(str).map(len).max() if not df.empty else 0,
-                len(str(col)),
-            )
-            # Cap width at 50 to avoid excessively wide columns
-            worksheet.column_dimensions[worksheet.cell(row=1, column=col_idx).column_letter].width = min(max_len + 2, 50)
+        worksheet = writer.sheets['Filtered Data']
+        for i, col in enumerate(df.columns, 1):
+            max_len = len(str(col))
+            if not df.empty:
+                max_len = max(max_len, df[col].astype(str).map(len).max())
+            worksheet.column_dimensions[get_column_letter(i)].width = max_len + 2
+            
     return output.getvalue()
