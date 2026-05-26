@@ -13,6 +13,7 @@ from table import render_data_table
 from exporter import to_csv_bytes, to_excel_bytes
 from delivery_parser import parse_records, parse_data_fuzzy
 from data_loader import validate_schema, coerce_types
+import issue_dashboard
 
 # 1. Page Configuration
 st.set_page_config(page_title="Dispatch & Delivery Report", page_icon="📦", layout="wide", initial_sidebar_state="expanded")
@@ -153,82 +154,4 @@ if app_mode == "📦 Dispatch Analysis":
             st.sidebar.error(f"Export failed: {e}")
 
 elif app_mode == "📝 Issue Tracker":
-    st.title("📝 Issue Tracker")
-    st.markdown("Track and report issues directly in the embedded spreadsheet below or open the [Google Spreadsheet](https://docs.google.com/spreadsheets/d/1NwuJPzjNZEggxYI7585hT8w9qK7HVJk43Pgv6NHG3j4/edit?gid=0#gid=0) in a new tab.")
-    
-    # Issues KPI Section
-    ISSUES_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ4j3i94IWVlVYI5gErxzfmmaYNiirGqnrncRKrDCbHvmLYpzH9l4_etjYmfCoDj_Gv-_mps2gnufXE/pub?gid=0&single=true&output=csv"
-    
-    @st.cache_data(ttl=300)
-    def load_issues():
-        import pandas as pd
-        try:
-            return pd.read_csv(ISSUES_CSV_URL)
-        except Exception:
-            return pd.DataFrame()
-            
-    df_issues = load_issues()
-    if not df_issues.empty:
-        # Date Filter
-        if 'Date' in df_issues.columns:
-            import pandas as pd
-            df_issues['Date'] = pd.to_datetime(df_issues['Date'], errors='coerce')
-            valid_dates = df_issues['Date'].dropna()
-            
-            if not valid_dates.empty:
-                st.sidebar.header("🔍 Issue Filters")
-                min_date = valid_dates.min().date()
-                max_date = valid_dates.max().date()
-                
-                date_from = st.sidebar.date_input("From Date", value=min_date, min_value=min_date, max_value=max_date, key="issue_date_from")
-                date_to = st.sidebar.date_input("To Date", value=max_date, min_value=min_date, max_value=max_date, key="issue_date_to")
-                
-                if date_from and date_to:
-                    mask = (df_issues['Date'].dt.date >= date_from) & (df_issues['Date'].dt.date <= date_to)
-                    df_issues = df_issues[mask]
-        
-        issues_kpi = compute_issues_kpi(df_issues)
-        render_issues_kpi(issues_kpi)
-        
-        st.divider()
-        st.subheader("📊 Issue Analysis Report")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            if 'Delivery Issue' in df_issues.columns:
-                issue_counts = df_issues['Delivery Issue'].value_counts().reset_index()
-                issue_counts.columns = ['Delivery Issue', 'Count']
-                import plotly.express as px
-                fig = px.bar(
-                    issue_counts, 
-                    x='Delivery Issue', 
-                    y='Count', 
-                    title='Issues by Type',
-                    color='Delivery Issue'
-                )
-                with st.container(border=True):
-                    st.plotly_chart(fig, use_container_width=True)
-                    
-        with col2:
-            if 'FU Status' in df_issues.columns:
-                fu_counts = df_issues['FU Status'].fillna('Unassigned').value_counts().reset_index()
-                fu_counts.columns = ['FU Status', 'Count']
-                fig2 = px.pie(
-                    fu_counts, 
-                    names='FU Status', 
-                    values='Count', 
-                    title='Follow-up Status Distribution',
-                    hole=0.4
-                )
-                with st.container(border=True):
-                    st.plotly_chart(fig2, use_container_width=True)
-                    
-        # Optional: Show latest issues table
-        with st.expander("📋 View Recent Issues Data"):
-            st.dataframe(df_issues, use_container_width=True)
-            
-    else:
-        st.info("⚠️ Could not load Issue Logs for KPIs. Ensure the Google Sheet is published to the web ('Anyone with the link can view') to see automatic insights.")
-    
-    st.divider()
-    components.iframe("https://docs.google.com/spreadsheets/d/1NwuJPzjNZEggxYI7585hT8w9qK7HVJk43Pgv6NHG3j4/edit?gid=0&rm=minimal", height=800, scrolling=True)
+    issue_dashboard.render()
