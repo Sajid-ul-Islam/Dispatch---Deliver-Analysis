@@ -68,3 +68,48 @@ def render_kpi_cards(metrics: KPIMetrics) -> None:
         st.metric("Pending", f"{metrics.pending_count:,}")
     with cols2[2]:
         st.metric("Pickup Requested", f"{metrics.pickup_requested_count:,}")
+
+def compute_issues_kpi(df_issues: pd.DataFrame) -> dict:
+    if df_issues.empty:
+        return {"Total Issues": 0, "Pending/Open": 0}
+        
+    total_issues = len(df_issues)
+    
+    # Try to find a status column fuzzy match
+    status_col = next((col for col in df_issues.columns if 'status' in col.lower() or 'state' in col.lower()), None)
+    
+    pending_count = 0
+    if status_col:
+        # assume anything like 'open', 'pending', 'unresolved', 'in progress'
+        open_keywords = ['open', 'pending', 'unresolved', 'in progress', 'new']
+        # Convert to lowercase and strip whitespace for matching
+        status_series = df_issues[status_col].astype(str).str.lower().str.strip()
+        pending_mask = status_series.isin(open_keywords)
+        pending_count = int(pending_mask.sum())
+        
+    return {"Total Issues": total_issues, "Pending/Open": pending_count}
+
+def render_issues_kpi(issues_kpi: dict) -> None:
+    st.markdown("### 📝 Issue Log Insights")
+    cols = st.columns(4)
+    with cols[0]:
+        st.metric("Total Logged Issues", f"{issues_kpi.get('Total Issues', 0):,}")
+    
+    pending = issues_kpi.get('Pending/Open', 0)
+    with cols[1]:
+        if pending > 0:
+            # Show in red if there are pending issues
+            st.markdown(
+                f"<div><p style='font-size: 0.875rem; color: rgba(49, 51, 63, 0.6); margin-bottom: 0px;'>Pending/Open Issues</p>"
+                f"<h2 style='color: red; padding-top: 0px; margin-top: 0px;'>{pending:,}</h2></div>", 
+                unsafe_allow_html=True
+            )
+        else:
+            st.metric("Pending/Open Issues", "0")
+            
+    # Add a small insight
+    if issues_kpi.get('Total Issues', 0) > 0:
+        if pending > 0:
+            st.info(f"💡 **Insight:** There are {issues_kpi.get('Total Issues', 0)} total issues logged in the central sheet. **{pending}** of these are currently pending/open and require attention.")
+        else:
+            st.success(f"💡 **Insight:** All {issues_kpi.get('Total Issues', 0)} logged issues have been resolved. Great job!")

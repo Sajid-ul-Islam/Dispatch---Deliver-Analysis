@@ -2,7 +2,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 from data_loader import load_data, DataLoadError, SchemaValidationError
 from filters import render_sidebar_filters, apply_filters
-from kpi import compute_kpis, render_kpi_cards
+from kpi import compute_kpis, render_kpi_cards, compute_issues_kpi, render_issues_kpi
 from charts import (
     delivery_status_pie, 
     store_distribution_bar, 
@@ -100,6 +100,26 @@ with tab_dashboard:
     st.subheader("Key Metrics")
     metrics = compute_kpis(filtered_df)
     render_kpi_cards(metrics)
+    
+    st.divider()
+    
+    # Issues KPI Section
+    ISSUES_CSV_URL = "https://docs.google.com/spreadsheets/d/1NwuJPzjNZEggxYI7585hT8w9qK7HVJk43Pgv6NHG3j4/export?format=csv&gid=0"
+    
+    @st.cache_data(ttl=300)
+    def load_issues():
+        import pandas as pd
+        try:
+            return pd.read_csv(ISSUES_CSV_URL)
+        except Exception:
+            return pd.DataFrame()
+            
+    df_issues = load_issues()
+    if not df_issues.empty:
+        issues_kpi = compute_issues_kpi(df_issues)
+        render_issues_kpi(issues_kpi)
+    else:
+        st.info("⚠️ Could not load Issue Logs for KPIs. Ensure the [Google Sheet](https://docs.google.com/spreadsheets/d/1NwuJPzjNZEggxYI7585hT8w9qK7HVJk43Pgv6NHG3j4/edit?gid=0#gid=0) is published to the web ('Anyone with the link can view') to see automatic insights.")
     
     st.divider()
     
