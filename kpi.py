@@ -41,77 +41,24 @@ def compute_kpis(df: pd.DataFrame) -> KPIMetrics:
 
 
 def render_kpi_cards(metrics: KPIMetrics) -> None:
-    # 4-column layout as requested
-    cols1 = st.columns(4)
-    with cols1[0]:
-        st.metric("Total Parcels", f"{metrics.total_parcels:,}")
-    with cols1[1]:
-        st.metric("Total COD", f"৳{metrics.total_cod:,.2f}")
-    with cols1[2]:
-        st.metric("Total Charges", f"৳{metrics.total_charges:,.2f}")
-    with cols1[3]:
-        st.metric("Total Discounts", f"৳{metrics.total_discounts:,.2f}")
-        
-    cols2 = st.columns(4)
-    with cols2[0]:
+    # Grid Layout: Row 1 - Main Volume & Financials
+    row1_cols = st.columns([1, 1.2, 1, 1, 1.2])
+    row1_cols[0].metric("📦 Total Parcels", f"{metrics.total_parcels:,}")
+    row1_cols[1].metric("💰 Total COD", f"৳{metrics.total_cod:,.0f}")
+    row1_cols[2].metric("🏷️ Charges", f"৳{metrics.total_charges:,.0f}")
+    row1_cols[3].metric("✂️ Discounts", f"৳{metrics.total_discounts:,.0f}")
+    
+    # Net Revenue Highlight
+    with row1_cols[4]:
         if metrics.net_revenue < 0:
-            # Display negative net revenue in red without breaking the layout
-            st.markdown(
-                f"<div><p style='font-size: 0.875rem; color: rgba(49, 51, 63, 0.6); margin-bottom: 0px;'>Net Revenue</p>"
-                f"<h2 style='color: red; padding-top: 0px; margin-top: 0px;'>৳{metrics.net_revenue:,.2f}</h2></div>", 
-                unsafe_allow_html=True
-            )
+            st.metric("📉 Net Revenue", f"৳{metrics.net_revenue:,.2f}", delta="Loss", delta_color="inverse")
         else:
-            st.metric("Net Revenue", f"৳{metrics.net_revenue:,.2f}")
-            
-    with cols2[1]:
-        st.metric("Pending", f"{metrics.pending_count:,}")
-    with cols2[2]:
-        st.metric("Pickup Requested", f"{metrics.pickup_requested_count:,}")
+            st.metric("📈 Net Revenue", f"৳{metrics.net_revenue:,.2f}")
 
-def compute_issues_kpi(df_issues: pd.DataFrame) -> dict:
-    if df_issues.empty:
-        return {"Total Issues": 0, "Pending/Open": 0}
-        
-    total_issues = len(df_issues)
-    
-    pending_count = 0
-    if 'FU Status' in df_issues.columns:
-        # Use FU Status directly
-        pending_mask = df_issues['FU Status'].astype(str).str.lower().str.strip() == 'pending'
-        pending_count = int(pending_mask.sum())
-    else:
-        # Fallback to general fuzzy match if schema changes
-        status_col = next((col for col in df_issues.columns if 'status' in col.lower() or 'state' in col.lower()), None)
-        if status_col:
-            open_keywords = ['open', 'pending', 'unresolved', 'in progress', 'new']
-            status_series = df_issues[status_col].astype(str).str.lower().str.strip()
-            pending_mask = status_series.isin(open_keywords)
-            pending_count = int(pending_mask.sum())
-        
-    return {"Total Issues": total_issues, "Pending/Open": pending_count}
-
-def render_issues_kpi(issues_kpi: dict) -> None:
-    st.markdown("### 📝 Issue Log Insights")
-    cols = st.columns(4)
-    with cols[0]:
-        st.metric("Total Logged Issues", f"{issues_kpi.get('Total Issues', 0):,}")
-    
-    pending = issues_kpi.get('Pending/Open', 0)
-    with cols[1]:
-        if pending > 0:
-            # Show in red if there are pending issues
-            st.markdown(
-                f"<div><p style='font-size: 0.875rem; color: rgba(49, 51, 63, 0.6); margin-bottom: 0px;'>Pending/Open Issues</p>"
-                f"<h2 style='color: red; padding-top: 0px; margin-top: 0px;'>{pending:,}</h2></div>", 
-                unsafe_allow_html=True
-            )
-        else:
-            st.metric("Pending/Open Issues", "0")
-            
-    # Add a small insight
-    if issues_kpi.get('Total Issues', 0) > 0:
-        if pending > 0:
-            st.info(f"💡 **Insight:** There are {issues_kpi.get('Total Issues', 0)} total issues logged in the central sheet. **{pending}** of these are currently pending/open and require attention.")
-        else:
-            st.success(f"💡 **Insight:** All {issues_kpi.get('Total Issues', 0)} logged issues have been resolved. Great job!")
+    # Row 2 - Status Specifics
+    st.write("") # Spacer
+    row2_cols = st.columns([1, 1, 1, 1, 1.2])
+    with row2_cols[0]:
+        st.metric("⏳ Pending", f"{metrics.pending_count:,}")
+    with row2_cols[1]:
+        st.metric("🚚 Pickup Req.", f"{metrics.pickup_requested_count:,}")

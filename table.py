@@ -55,3 +55,21 @@ def render_data_table(df: pd.DataFrame) -> None:
         hide_index=True,
         height=400,
     )
+
+    # --- Quick Copy Utility ---
+    # Streamlit dataframes allow copying cells directly by hovering or using Ctrl+C.
+    # This utility provides an explicit, one-click interface for critical fields.
+    st.write("") 
+    with st.expander("📋 Quick Copy Helper", expanded=False):
+        st.markdown("Search for a record below to get one-click copyable fields.")
+        selected_id = st.selectbox("Select Consignment ID", options=df["Consignment ID"].unique(), key="copy_helper_id")
+        
+        if selected_id:
+            row = df[df["Consignment ID"] == selected_id].iloc[0]
+            c1, c2, c3 = st.columns(3)
+            c1.markdown("**Consignment ID**")
+            c1.code(row["Consignment ID"], language=None)
+            c2.markdown("**Recipient Name**")
+            c2.code(row["Recipient Name"], language=None)
+            c3.markdown("**Phone Number**")
+            c3.code(str(row["Phone"]), language=None)

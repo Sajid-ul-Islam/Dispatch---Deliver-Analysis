@@ -1,5 +1,6 @@
 import pandas as pd
 import streamlit as st
+from datetime import datetime
 
 class SchemaValidationError(Exception):
     pass
@@ -50,7 +51,7 @@ def coerce_types(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 @st.cache_data
-def load_data(source) -> pd.DataFrame:
+def load_data(source) -> tuple[pd.DataFrame, datetime]:
     try:
         # Works for both string path and UploadedFile object via pandas
         raw_df = pd.read_excel(source, engine="openpyxl")
@@ -63,4 +64,4 @@ def load_data(source) -> pd.DataFrame:
     
     validate_schema(raw_df)
     df = coerce_types(raw_df)
-    return df
+    return df, datetime.now()
