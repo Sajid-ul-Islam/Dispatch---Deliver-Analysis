@@ -75,17 +75,19 @@ def compute_issues_kpi(df_issues: pd.DataFrame) -> dict:
         
     total_issues = len(df_issues)
     
-    # Try to find a status column fuzzy match
-    status_col = next((col for col in df_issues.columns if 'status' in col.lower() or 'state' in col.lower()), None)
-    
     pending_count = 0
-    if status_col:
-        # assume anything like 'open', 'pending', 'unresolved', 'in progress'
-        open_keywords = ['open', 'pending', 'unresolved', 'in progress', 'new']
-        # Convert to lowercase and strip whitespace for matching
-        status_series = df_issues[status_col].astype(str).str.lower().str.strip()
-        pending_mask = status_series.isin(open_keywords)
+    if 'FU Status' in df_issues.columns:
+        # Use FU Status directly
+        pending_mask = df_issues['FU Status'].astype(str).str.lower().str.strip() == 'pending'
         pending_count = int(pending_mask.sum())
+    else:
+        # Fallback to general fuzzy match if schema changes
+        status_col = next((col for col in df_issues.columns if 'status' in col.lower() or 'state' in col.lower()), None)
+        if status_col:
+            open_keywords = ['open', 'pending', 'unresolved', 'in progress', 'new']
+            status_series = df_issues[status_col].astype(str).str.lower().str.strip()
+            pending_mask = status_series.isin(open_keywords)
+            pending_count = int(pending_mask.sum())
         
     return {"Total Issues": total_issues, "Pending/Open": pending_count}
 
